@@ -89,6 +89,17 @@ export default function PainelPage() {
     if (analiseAberta?.id === id) setAnaliseAberta(null);
   }
 
+  function renomearAnalise(id: string, novoTitulo: string) {
+    const t = novoTitulo.trim();
+    if (!t) return;
+    setAnalises((atual) => {
+      const nova = atual.map((a) => (a.id === id ? { ...a, titulo: t } : a));
+      salvarAnalises(nova);
+      return nova;
+    });
+    setAnaliseAberta((cur) => (cur && cur.id === id ? { ...cur, titulo: t } : cur));
+  }
+
   function analisarNoMarketing(p: Projeto) {
     const conteudo = `Projeto: ${p.nome}\n\n${p.descricao}${
       p.ideias.length ? "\n\nIdeias:\n- " + p.ideias.map((i) => i.texto).join("\n- ") : ""
@@ -263,6 +274,7 @@ export default function PainelPage() {
           onAnalisar={analisarNoMarketing}
           onVerAnalise={setAnaliseAberta}
           onExcluirAnalise={excluirAnalise}
+          onRenomearAnalise={renomearAnalise}
         />
       )}
 
@@ -281,6 +293,7 @@ function DetalheProjeto({
   onAnalisar,
   onVerAnalise,
   onExcluirAnalise,
+  onRenomearAnalise,
 }: {
   projeto: Projeto;
   analises: AnaliseSalva[];
@@ -289,8 +302,11 @@ function DetalheProjeto({
   onAnalisar: (p: Projeto) => void;
   onVerAnalise: (a: AnaliseSalva) => void;
   onExcluirAnalise: (id: string) => void;
+  onRenomearAnalise: (id: string, novoTitulo: string) => void;
 }) {
   const [novaIdeia, setNovaIdeia] = useState("");
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editTit, setEditTit] = useState("");
 
   function addIdeia(e: React.FormEvent) {
     e.preventDefault();
@@ -411,25 +427,71 @@ function DetalheProjeto({
                 key={a.id}
                 className="flex items-center justify-between gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2"
               >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{a.titulo}</p>
-                  <p className="text-[11px] text-[var(--muted)]">
-                    {new Date(a.criadoEm).toLocaleString("pt-BR")}
-                    {typeof a.resultado.diagnostico?.pontuacao === "number"
-                      ? ` · ${a.resultado.diagnostico.pontuacao}/100`
-                      : ""}
-                  </p>
+                <div className="min-w-0 flex-1">
+                  {editId === a.id ? (
+                    <input
+                      autoFocus
+                      className="input !py-1 !text-sm"
+                      value={editTit}
+                      onChange={(e) => setEditTit(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          onRenomearAnalise(a.id, editTit);
+                          setEditId(null);
+                        }
+                        if (e.key === "Escape") setEditId(null);
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <p className="truncate text-sm font-medium">{a.titulo}</p>
+                      <p className="text-[11px] text-[var(--muted)]">
+                        {new Date(a.criadoEm).toLocaleString("pt-BR")}
+                        {typeof a.resultado.diagnostico?.pontuacao === "number"
+                          ? ` · ${a.resultado.diagnostico.pontuacao}/100`
+                          : ""}
+                      </p>
+                    </>
+                  )}
                 </div>
-                <div className="flex shrink-0 gap-1.5">
-                  <button className="btn btn-ghost !px-2 !py-1 !text-xs" onClick={() => onVerAnalise(a)}>
-                    Ver
-                  </button>
-                  <button
-                    className="shrink-0 text-xs text-[var(--muted)] hover:text-[var(--danger)]"
-                    onClick={() => onExcluirAnalise(a.id)}
-                  >
-                    excluir
-                  </button>
+                <div className="flex shrink-0 items-center gap-1.5 text-xs text-[var(--muted)]">
+                  {editId === a.id ? (
+                    <>
+                      <button
+                        className="hover:text-[var(--brand)]"
+                        onClick={() => {
+                          onRenomearAnalise(a.id, editTit);
+                          setEditId(null);
+                        }}
+                      >
+                        salvar
+                      </button>
+                      <button className="hover:text-[var(--foreground)]" onClick={() => setEditId(null)}>
+                        cancelar
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button className="btn btn-ghost !px-2 !py-1 !text-xs" onClick={() => onVerAnalise(a)}>
+                        Ver
+                      </button>
+                      <button
+                        className="hover:text-[var(--foreground)]"
+                        onClick={() => {
+                          setEditId(a.id);
+                          setEditTit(a.titulo);
+                        }}
+                      >
+                        renomear
+                      </button>
+                      <button
+                        className="hover:text-[var(--danger)]"
+                        onClick={() => onExcluirAnalise(a.id)}
+                      >
+                        excluir
+                      </button>
+                    </>
+                  )}
                 </div>
               </li>
             ))}
