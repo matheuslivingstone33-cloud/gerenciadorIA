@@ -26,6 +26,14 @@ function formatarBytes(b: number): string {
   return (b / (1024 * 1024)).toFixed(1) + " MB";
 }
 
+// minúsculas e sem acento, para a busca do histórico casar "válvula" com "valvula".
+function normBusca(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+}
+
 interface Snapshot {
   titulo: string;
   entrada: EntradaResumo;
@@ -50,6 +58,7 @@ export default function MarketingPage() {
   const [salvas, setSalvas] = useState<AnaliseSalva[]>([]);
   const [carregadoSalvas, setCarregadoSalvas] = useState(false);
   const [origemProjeto, setOrigemProjeto] = useState<{ id: string; nome: string } | null>(null);
+  const [buscaHist, setBuscaHist] = useState("");
 
   // prefill vindo do Painel + carregar histórico
   useEffect(() => {
@@ -169,6 +178,16 @@ export default function MarketingPage() {
   function excluirSalva(id: string) {
     setSalvas((atual) => atual.filter((a) => a.id !== id));
   }
+
+  const termoBusca = normBusca(buscaHist.trim());
+  const salvasFiltradas = termoBusca
+    ? salvas.filter((a) => {
+        const alvo = normBusca(
+          [a.titulo, a.projetoNome ?? "", OBJETIVO_INFO[a.entrada.objetivo].label].join(" "),
+        );
+        return alvo.includes(termoBusca);
+      })
+    : salvas;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_1fr]">
@@ -323,14 +342,33 @@ export default function MarketingPage() {
 
         {/* histórico */}
         <div className="card p-4">
-          <h2 className="text-sm font-semibold">Histórico de análises</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold">Histórico de análises</h2>
+            {salvas.length > 0 && (
+              <span className="text-[11px] text-[var(--muted)]">
+                {termoBusca ? `${salvasFiltradas.length}/${salvas.length}` : salvas.length}
+              </span>
+            )}
+          </div>
+          {salvas.length > 0 && (
+            <input
+              className="input mt-2 !py-1.5 !text-xs"
+              placeholder="Buscar por título, projeto ou objetivo..."
+              value={buscaHist}
+              onChange={(e) => setBuscaHist(e.target.value)}
+            />
+          )}
           {salvas.length === 0 ? (
-            <p className="mt-1 text-xs text-[var(--muted)]">
+            <p className="mt-2 text-xs text-[var(--muted)]">
               Nenhuma análise salva ainda. Ao analisar, use “Salvar” para guardar aqui.
+            </p>
+          ) : salvasFiltradas.length === 0 ? (
+            <p className="mt-2 text-xs text-[var(--muted)]">
+              Nada encontrado para “{buscaHist.trim()}”.
             </p>
           ) : (
             <ul className="mt-2 space-y-2">
-              {salvas.map((a) => (
+              {salvasFiltradas.map((a) => (
                 <li key={a.id} className="rounded-lg bg-[var(--surface-2)] p-2.5">
                   <div className="flex items-start justify-between gap-2">
                     <button
