@@ -1,69 +1,479 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  OBJETIVO_INFO,
+  STATUS_INFO,
+  type AnaliseSalva,
+  type Objetivo,
+  type ProjectStatus,
+  type Projeto,
+} from "@/lib/types";
+import {
+  carregarAnalises,
+  carregarProjetos,
+  definirPrefillMarketing,
+  novoId,
+  salvarAnalises,
+  salvarProjetos,
+} from "@/lib/storage";
+import MarketingResultView from "@/components/MarketingResultView";
+
+const ORDEM_STATUS: ProjectStatus[] = ["ideia", "andamento", "pausado", "concluido"];
+
+export default function PainelPage() {
+  const router = useRouter();
+  const [projetos, setProjetos] = useState<Projeto[]>([]);
+  const [analises, setAnalises] = useState<AnaliseSalva[]>([]);
+  const [carregado, setCarregado] = useState(false);
+  const [aberto, setAberto] = useState<string | null>(null);
+  const [analiseAberta, setAnaliseAberta] = useState<AnaliseSalva | null>(null);
+
+  // formulário de novo projeto
+  const [nome, setNome] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [objetivo, setObjetivo] = useState<Objetivo>("ambos");
+
+  useEffect(() => {
+    setProjetos(carregarProjetos());
+    setAnalises(carregarAnalises());
+    setCarregado(true);
+  }, []);
+
+  useEffect(() => {
+    if (carregado) salvarProjetos(projetos);
+  }, [projetos, carregado]);
+
+  function atualizar(id: string, patch: Partial<Projeto>) {
+    setProjetos((atual) =>
+      atual.map((p) =>
+        p.id === id ? { ...p, ...patch, atualizadoEm: new Date().toISOString() } : p,
+      ),
+    );
+  }
+
+  function adicionarProjeto(e: React.FormEvent) {
+    e.preventDefault();
+    if (!nome.trim()) return;
+    const agora = new Date().toISOString();
+    setProjetos((atual) => [
+      {
+        id: novoId(),
+        nome: nome.trim(),
+        descricao: descricao.trim(),
+        status: "ideia",
+        objetivo,
+        ideias: [],
+        criadoEm: agora,
+        atualizadoEm: agora,
+      },
+      ...atual,
+    ]);
+    setNome("");
+    setDescricao("");
+    setObjetivo("ambos");
+  }
+
+  function excluir(id: string) {
+    setProjetos((atual) => atual.filter((p) => p.id !== id));
+    if (aberto === id) setAberto(null);
+  }
+
+  function excluirAnalise(id: string) {
+    setAnalises((atual) => {
+      const nova = atual.filter((a) => a.id !== id);
+      salvarAnalises(nova);
+      return nova;
+    });
+    if (analiseAberta?.id === id) setAnaliseAberta(null);
+  }
+
+  function analisarNoMarketing(p: Projeto) {
+    const conteudo = `Projeto: ${p.nome}\n\n${p.descricao}${
+      p.ideias.length ? "\n\nIdeias:\n- " + p.ideias.map((i) => i.texto).join("\n- ") : ""
+    }`;
+    definirPrefillMarketing({
+      conteudo,
+      objetivo: p.objetivo,
+      projetoId: p.id,
+      projetoNome: p.nome,
+    });
+    router.push("/marketing");
+  }
+
+  const porStatus = useMemo(() => {
+    const mapa: Record<ProjectStatus, Projeto[]> = {
+      ideia: [],
+      andamento: [],
+      pausado: [],
+      concluido: [],
+    };
+    for (const p of projetos) mapa[p.status].push(p);
+    return mapa;
+  }, [projetos]);
+
+  const analisesPorProjeto = useMemo(() => {
+    const mapa: Record<string, AnaliseSalva[]> = {};
+    for (const a of analises) {
+      if (!a.projetoId) continue;
+      (mapa[a.projetoId] ??= []).push(a);
+    }
+    return mapa;
+  }, [analises]);
+
+  const projetoAberto = projetos.find((p) => p.id === aberto) ?? null;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Painel de projetos</h1>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          Gerencie, controle e ideie seus projetos. Mova pelo status e envie qualquer um
+          para a Análise de Marketing.
+        </p>
+      </div>
+
+      {/* novo projeto */}
+      <form onSubmit={adicionarProjeto} className="card p-4">
+        <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
+          <input
+            className="input"
+            placeholder="Nome do projeto (ex.: Lançamento linha X)"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+          />
+          <select
+            className="input"
+            value={objetivo}
+            onChange={(e) => setObjetivo(e.target.value as Objetivo)}
+          >
+            {(Object.keys(OBJETIVO_INFO) as Objetivo[]).map((o) => (
+              <option key={o} value={o}>
+                {OBJETIVO_INFO[o].label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <textarea
+          className="input mt-3 min-h-[70px] resize-y"
+          placeholder="Descrição / ideia inicial (opcional)"
+          value={descricao}
+          onChange={(e) => setDescricao(e.target.value)}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+        <div className="mt-3 flex justify-end">
+          <button type="submit" className="btn btn-primary" disabled={!nome.trim()}>
+            + Adicionar projeto
+          </button>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+      </form>
+
+      {/* quadro */}
+      {carregado && projetos.length === 0 ? (
+        <div className="card grid place-items-center p-10 text-center text-sm text-[var(--muted)]">
+          Nenhum projeto ainda. Adicione o primeiro acima 👆
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {ORDEM_STATUS.map((status) => (
+            <div key={status} className="flex flex-col gap-3">
+              <div className="flex items-center justify-between px-1">
+                <span className="flex items-center gap-2 text-sm font-semibold">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ background: STATUS_INFO[status].cor }}
+                  />
+                  {STATUS_INFO[status].label}
+                </span>
+                <span className="text-xs text-[var(--muted)]">
+                  {porStatus[status].length}
+                </span>
+              </div>
+
+              {porStatus[status].map((p) => {
+                const qtdAnalises = analisesPorProjeto[p.id]?.length ?? 0;
+                return (
+                  <div key={p.id} className="card p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-sm font-semibold leading-snug">{p.nome}</h3>
+                      <span className="badge shrink-0">{OBJETIVO_INFO[p.objetivo].label}</span>
+                    </div>
+                    {p.descricao && (
+                      <p className="mt-1.5 line-clamp-3 text-xs text-[var(--muted)]">
+                        {p.descricao}
+                      </p>
+                    )}
+
+                    <div className="mt-2.5 flex items-center gap-2">
+                      <select
+                        className="input !py-1 !text-xs"
+                        value={p.status}
+                        onChange={(e) => atualizar(p.id, { status: e.target.value as ProjectStatus })}
+                      >
+                        {ORDEM_STATUS.map((s) => (
+                          <option key={s} value={s}>
+                            {STATUS_INFO[s].label}
+                          </option>
+                        ))}
+                      </select>
+                      {p.ideias.length > 0 && (
+                        <span className="badge shrink-0" title="Ideias">
+                          💡 {p.ideias.length}
+                        </span>
+                      )}
+                      {qtdAnalises > 0 && (
+                        <span className="badge shrink-0" title="Análises de marketing">
+                          📊 {qtdAnalises}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-2.5 flex flex-wrap gap-1.5">
+                      <button className="btn btn-ghost !px-2 !py-1 !text-xs" onClick={() => setAberto(p.id)}>
+                        Abrir
+                      </button>
+                      <button
+                        className="btn btn-primary !px-2 !py-1 !text-xs"
+                        onClick={() => analisarNoMarketing(p)}
+                      >
+                        Analisar 🔎
+                      </button>
+                      <button
+                        className="btn btn-ghost !px-2 !py-1 !text-xs"
+                        style={{ color: "var(--danger)" }}
+                        onClick={() => excluir(p.id)}
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {projetoAberto && (
+        <DetalheProjeto
+          projeto={projetoAberto}
+          analises={analisesPorProjeto[projetoAberto.id] ?? []}
+          onFechar={() => setAberto(null)}
+          onAtualizar={atualizar}
+          onAnalisar={analisarNoMarketing}
+          onVerAnalise={setAnaliseAberta}
+          onExcluirAnalise={excluirAnalise}
+        />
+      )}
+
+      {analiseAberta && (
+        <AnaliseViewer analise={analiseAberta} onFechar={() => setAnaliseAberta(null)} />
+      )}
+    </div>
+  );
+}
+
+function DetalheProjeto({
+  projeto,
+  analises,
+  onFechar,
+  onAtualizar,
+  onAnalisar,
+  onVerAnalise,
+  onExcluirAnalise,
+}: {
+  projeto: Projeto;
+  analises: AnaliseSalva[];
+  onFechar: () => void;
+  onAtualizar: (id: string, patch: Partial<Projeto>) => void;
+  onAnalisar: (p: Projeto) => void;
+  onVerAnalise: (a: AnaliseSalva) => void;
+  onExcluirAnalise: (id: string) => void;
+}) {
+  const [novaIdeia, setNovaIdeia] = useState("");
+
+  function addIdeia(e: React.FormEvent) {
+    e.preventDefault();
+    if (!novaIdeia.trim()) return;
+    onAtualizar(projeto.id, {
+      ideias: [
+        ...projeto.ideias,
+        { id: novoId(), texto: novaIdeia.trim(), criadoEm: new Date().toISOString() },
+      ],
+    });
+    setNovaIdeia("");
+  }
+
+  function removerIdeia(id: string) {
+    onAtualizar(projeto.id, { ideias: projeto.ideias.filter((i) => i.id !== id) });
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
+      onClick={onFechar}
+    >
+      <div
+        className="card max-h-[90vh] w-full max-w-lg overflow-y-auto p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <input
+            className="input !text-base !font-semibold"
+            value={projeto.nome}
+            onChange={(e) => onAtualizar(projeto.id, { nome: e.target.value })}
+          />
+          <button className="btn btn-ghost !px-2.5 !py-1.5" onClick={onFechar}>
+            ✕
+          </button>
+        </div>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="text-xs font-medium text-[var(--muted)]">
+            Objetivo
+            <select
+              className="input mt-1"
+              value={projeto.objetivo}
+              onChange={(e) => onAtualizar(projeto.id, { objetivo: e.target.value as Objetivo })}
+            >
+              {(Object.keys(OBJETIVO_INFO) as Objetivo[]).map((o) => (
+                <option key={o} value={o}>
+                  {OBJETIVO_INFO[o].label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs font-medium text-[var(--muted)]">
+            Status
+            <select
+              className="input mt-1"
+              value={projeto.status}
+              onChange={(e) => onAtualizar(projeto.id, { status: e.target.value as ProjectStatus })}
+            >
+              {ORDEM_STATUS.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_INFO[s].label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <label className="mt-3 block text-xs font-medium text-[var(--muted)]">
+          Descrição
+          <textarea
+            className="input mt-1 min-h-[90px] resize-y"
+            value={projeto.descricao}
+            onChange={(e) => onAtualizar(projeto.id, { descricao: e.target.value })}
+          />
+        </label>
+
+        <div className="mt-4">
+          <h4 className="text-sm font-semibold">Ideias & criatividade</h4>
+          <form onSubmit={addIdeia} className="mt-2 flex gap-2">
+            <input
+              className="input"
+              placeholder="Anote uma ideia..."
+              value={novaIdeia}
+              onChange={(e) => setNovaIdeia(e.target.value)}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <button className="btn btn-primary shrink-0" disabled={!novaIdeia.trim()}>
+              + Ideia
+            </button>
+          </form>
+          <ul className="mt-2 space-y-1.5">
+            {projeto.ideias.map((i) => (
+              <li
+                key={i.id}
+                className="flex items-start justify-between gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-sm"
+              >
+                <span>💡 {i.texto}</span>
+                <button
+                  className="shrink-0 text-xs text-[var(--muted)] hover:text-[var(--danger)]"
+                  onClick={() => removerIdeia(i.id)}
+                >
+                  remover
+                </button>
+              </li>
+            ))}
+            {projeto.ideias.length === 0 && (
+              <li className="px-1 text-xs text-[var(--muted)]">Nenhuma ideia anotada ainda.</li>
+            )}
+          </ul>
         </div>
-      </main>
+
+        {/* análises vinculadas */}
+        <div className="mt-4">
+          <h4 className="text-sm font-semibold">Análises de marketing</h4>
+          <ul className="mt-2 space-y-1.5">
+            {analises.map((a) => (
+              <li
+                key={a.id}
+                className="flex items-center justify-between gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{a.titulo}</p>
+                  <p className="text-[11px] text-[var(--muted)]">
+                    {new Date(a.criadoEm).toLocaleString("pt-BR")}
+                    {typeof a.resultado.diagnostico?.pontuacao === "number"
+                      ? ` · ${a.resultado.diagnostico.pontuacao}/100`
+                      : ""}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-1.5">
+                  <button className="btn btn-ghost !px-2 !py-1 !text-xs" onClick={() => onVerAnalise(a)}>
+                    Ver
+                  </button>
+                  <button
+                    className="shrink-0 text-xs text-[var(--muted)] hover:text-[var(--danger)]"
+                    onClick={() => onExcluirAnalise(a.id)}
+                  >
+                    excluir
+                  </button>
+                </div>
+              </li>
+            ))}
+            {analises.length === 0 && (
+              <li className="px-1 text-xs text-[var(--muted)]">
+                Nenhuma análise salva para este projeto ainda.
+              </li>
+            )}
+          </ul>
+        </div>
+
+        <div className="mt-5 flex justify-end">
+          <button className="btn btn-primary" onClick={() => onAnalisar(projeto)}>
+            Nova análise de marketing 🔎
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AnaliseViewer({ analise, onFechar }: { analise: AnaliseSalva; onFechar: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
+      onClick={onFechar}
+    >
+      <div
+        className="card max-h-[92vh] w-full max-w-2xl overflow-y-auto p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="truncate text-lg font-semibold">{analise.titulo}</h3>
+            {analise.projetoNome && (
+              <p className="text-xs text-[var(--muted)]">Projeto: {analise.projetoNome}</p>
+            )}
+          </div>
+          <button className="btn btn-ghost !px-2.5 !py-1.5" onClick={onFechar}>
+            ✕
+          </button>
+        </div>
+        <MarketingResultView r={analise.resultado} titulo={analise.titulo} />
+      </div>
     </div>
   );
 }
