@@ -59,6 +59,8 @@ export default function MarketingPage() {
   const [carregadoSalvas, setCarregadoSalvas] = useState(false);
   const [origemProjeto, setOrigemProjeto] = useState<{ id: string; nome: string } | null>(null);
   const [buscaHist, setBuscaHist] = useState("");
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [tituloEdit, setTituloEdit] = useState("");
 
   // prefill vindo do Painel + carregar histórico
   useEffect(() => {
@@ -177,6 +179,20 @@ export default function MarketingPage() {
 
   function excluirSalva(id: string) {
     setSalvas((atual) => atual.filter((a) => a.id !== id));
+    if (editandoId === id) setEditandoId(null);
+  }
+
+  function iniciarRenome(a: AnaliseSalva) {
+    setEditandoId(a.id);
+    setTituloEdit(a.titulo);
+  }
+
+  function confirmarRenome(id: string) {
+    const novo = tituloEdit.trim();
+    if (novo) {
+      setSalvas((atual) => atual.map((a) => (a.id === id ? { ...a, titulo: novo } : a)));
+    }
+    setEditandoId(null);
   }
 
   const termoBusca = normBusca(buscaHist.trim());
@@ -371,18 +387,52 @@ export default function MarketingPage() {
               {salvasFiltradas.map((a) => (
                 <li key={a.id} className="rounded-lg bg-[var(--surface-2)] p-2.5">
                   <div className="flex items-start justify-between gap-2">
-                    <button
-                      className="text-left text-sm font-medium leading-snug hover:underline"
-                      onClick={() => abrirSalva(a)}
-                    >
-                      {a.titulo || "Análise"}
-                    </button>
-                    <button
-                      className="shrink-0 text-xs text-[var(--muted)] hover:text-[var(--danger)]"
-                      onClick={() => excluirSalva(a.id)}
-                    >
-                      excluir
-                    </button>
+                    {editandoId === a.id ? (
+                      <input
+                        autoFocus
+                        className="input !py-1 !text-sm"
+                        value={tituloEdit}
+                        onChange={(e) => setTituloEdit(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") confirmarRenome(a.id);
+                          if (e.key === "Escape") setEditandoId(null);
+                        }}
+                      />
+                    ) : (
+                      <button
+                        className="text-left text-sm font-medium leading-snug hover:underline"
+                        onClick={() => abrirSalva(a)}
+                      >
+                        {a.titulo || "Análise"}
+                      </button>
+                    )}
+                    <div className="flex shrink-0 gap-1.5 text-xs text-[var(--muted)]">
+                      {editandoId === a.id ? (
+                        <>
+                          <button
+                            className="hover:text-[var(--brand)]"
+                            onClick={() => confirmarRenome(a.id)}
+                          >
+                            salvar
+                          </button>
+                          <button className="hover:text-[var(--foreground)]" onClick={() => setEditandoId(null)}>
+                            cancelar
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button className="hover:text-[var(--foreground)]" onClick={() => iniciarRenome(a)}>
+                            renomear
+                          </button>
+                          <button
+                            className="hover:text-[var(--danger)]"
+                            onClick={() => excluirSalva(a.id)}
+                          >
+                            excluir
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--muted)]">
                     <span className="badge !py-0">{OBJETIVO_INFO[a.entrada.objetivo].label}</span>
