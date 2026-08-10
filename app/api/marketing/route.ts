@@ -9,7 +9,8 @@ import type { EntradaMarketing, Objetivo } from "@/lib/types";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const MAX_ARQUIVO_BYTES = 10 * 1024 * 1024; // 10 MB por arquivo
+// 4 MB por arquivo: hospedado, o corpo da requisição é limitado a ~4,5 MB.
+const MAX_ARQUIVO_BYTES = 4 * 1024 * 1024;
 const MAX_ARQUIVOS = 5;
 const MAX_CHARS_ARQUIVO = 40000;
 
@@ -17,6 +18,7 @@ interface Anexos {
   textos: string[];
   lidos: string[];
   ignorados: string[];
+  grandes: string[];
   pdfsSemTexto: string[];
 }
 
@@ -30,10 +32,14 @@ function ehPdf(nome: string, mime: string): boolean {
 }
 
 async function processarArquivos(arquivos: File[]): Promise<Anexos> {
-  const out: Anexos = { textos: [], lidos: [], ignorados: [], pdfsSemTexto: [] };
+  const out: Anexos = { textos: [], lidos: [], ignorados: [], grandes: [], pdfsSemTexto: [] };
 
   for (const f of arquivos.slice(0, MAX_ARQUIVOS)) {
-    if (!f || f.size === 0 || f.size > MAX_ARQUIVO_BYTES) continue;
+    if (!f || f.size === 0) continue;
+    if (f.size > MAX_ARQUIVO_BYTES) {
+      out.grandes.push(f.name || "arquivo");
+      continue;
+    }
     const nome = f.name || "arquivo";
     const mime = (f.type || "").toLowerCase();
     const buf = Buffer.from(await f.arrayBuffer());
@@ -63,6 +69,9 @@ async function processarArquivos(arquivos: File[]): Promise<Anexos> {
 
 function montarAviso(a: Anexos): string | undefined {
   const partes: string[] = [];
+  if (a.grandes.length) {
+    partes.push(`${a.grandes.join(", ")}: passa de 4 MB e não foi enviado.`);
+  }
   if (a.pdfsSemTexto.length) {
     partes.push(
       `Não consegui extrair texto de ${a.pdfsSemTexto.join(", ")} — provavelmente é um PDF ` +
@@ -107,8 +116,8 @@ export async function POST(req: Request) {
     return Response.json(
       {
         erro:
-          anexos.pdfsSemTexto.length || anexos.ignorados.length
-            ? "Não foi possível ler o(s) anexo(s). Cole o texto no campo para analisar."
+          anexos.pdfsSemTexto.length || anexos.ignorados.length || anexos.grandes.length
+            ? montarAviso(anexos) + " Cole o texto no campo para analisar."
             : "Escreva ou cole um conteúdo para analisar.",
       },
       { status: 400 },

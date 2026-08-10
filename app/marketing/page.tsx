@@ -17,7 +17,7 @@ import {
 import MarketingResultView from "@/components/MarketingResultView";
 
 const MAX_ARQUIVOS = 5;
-const MAX_ARQUIVO_BYTES = 10 * 1024 * 1024;
+const MAX_ARQUIVO_BYTES = 4 * 1024 * 1024;
 const ACEITA = ".pdf,.txt,.md,.markdown,.csv,.tsv,.json,.log,.html";
 
 function formatarBytes(b: number): string {
@@ -82,7 +82,7 @@ export default function MarketingPage() {
           break;
         }
         if (f.size > MAX_ARQUIVO_BYTES) {
-          setAvisoArquivo(`"${f.name}" passa de 10 MB e foi ignorado.`);
+          setAvisoArquivo(`"${f.name}" passa de 4 MB e foi ignorado.`);
           continue;
         }
         if (combinados.some((x) => x.name === f.name && x.size === f.size)) continue;

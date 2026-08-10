@@ -21,8 +21,9 @@ chave e não manda nada para a internet — nem o texto, nem os arquivos.
     valor, gatilhos, objeções, CTAs), trilha de alcance (ganchos, canais,
     formatos), ideias de conteúdo, palavras-chave, hashtags e próximos passos.
 - **Anexos** — PDF de texto, `.txt`, `.md`, `.csv`, `.json` e `.log` (até 5
-  arquivos, 10 MB cada). O texto do PDF é extraído aqui mesmo, sem biblioteca
-  externa. PDF escaneado (imagem) e imagens não são lidos — o app avisa.
+  arquivos, 4 MB cada — o limite de corpo de requisição da hospedagem). O texto
+  do PDF é extraído aqui mesmo, sem biblioteca externa. PDF escaneado (imagem) e
+  imagens não são lidos — o app avisa.
 - **Exportar** — copiar a análise ou baixar em `.md` para mandar por WhatsApp/e-mail.
 - **Histórico** — salve qualquer análise, reabra depois e veja a nota. Análises
   ficam vinculadas ao projeto de origem e aparecem dentro dele no Painel.
