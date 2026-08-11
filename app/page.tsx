@@ -22,6 +22,14 @@ import MarketingResultView from "@/components/MarketingResultView";
 
 const ORDEM_STATUS: ProjectStatus[] = ["ideia", "andamento", "pausado", "concluido"];
 
+// minúsculas e sem acento, para a busca casar "válvula" com "valvula".
+function normBusca(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+}
+
 export default function PainelPage() {
   const router = useRouter();
   const [projetos, setProjetos] = useState<Projeto[]>([]);
@@ -29,6 +37,8 @@ export default function PainelPage() {
   const [carregado, setCarregado] = useState(false);
   const [aberto, setAberto] = useState<string | null>(null);
   const [analiseAberta, setAnaliseAberta] = useState<AnaliseSalva | null>(null);
+  const [buscaProj, setBuscaProj] = useState("");
+  const [filtroObj, setFiltroObj] = useState<Objetivo | "todos">("todos");
 
   // formulário de novo projeto
   const [nome, setNome] = useState("");
@@ -113,6 +123,15 @@ export default function PainelPage() {
     router.push("/marketing");
   }
 
+  const projetosFiltrados = useMemo(() => {
+    const termo = normBusca(buscaProj.trim());
+    return projetos.filter((p) => {
+      if (filtroObj !== "todos" && p.objetivo !== filtroObj) return false;
+      if (!termo) return true;
+      return normBusca(`${p.nome} ${p.descricao}`).includes(termo);
+    });
+  }, [projetos, buscaProj, filtroObj]);
+
   const porStatus = useMemo(() => {
     const mapa: Record<ProjectStatus, Projeto[]> = {
       ideia: [],
@@ -120,9 +139,9 @@ export default function PainelPage() {
       pausado: [],
       concluido: [],
     };
-    for (const p of projetos) mapa[p.status].push(p);
+    for (const p of projetosFiltrados) mapa[p.status].push(p);
     return mapa;
-  }, [projetos]);
+  }, [projetosFiltrados]);
 
   const analisesPorProjeto = useMemo(() => {
     const mapa: Record<string, AnaliseSalva[]> = {};
@@ -179,10 +198,43 @@ export default function PainelPage() {
         </div>
       </form>
 
+      {/* busca e filtro */}
+      {projetos.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            className="input max-w-xs !py-1.5 !text-sm"
+            placeholder="Buscar projeto por nome ou descrição..."
+            value={buscaProj}
+            onChange={(e) => setBuscaProj(e.target.value)}
+          />
+          <select
+            className="input !w-auto !py-1.5 !text-sm"
+            value={filtroObj}
+            onChange={(e) => setFiltroObj(e.target.value as Objetivo | "todos")}
+          >
+            <option value="todos">Todos os objetivos</option>
+            {(Object.keys(OBJETIVO_INFO) as Objetivo[]).map((o) => (
+              <option key={o} value={o}>
+                {OBJETIVO_INFO[o].label}
+              </option>
+            ))}
+          </select>
+          {(buscaProj.trim() || filtroObj !== "todos") && (
+            <span className="text-xs text-[var(--muted)]">
+              {projetosFiltrados.length} de {projetos.length}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* quadro */}
       {carregado && projetos.length === 0 ? (
         <div className="card grid place-items-center p-10 text-center text-sm text-[var(--muted)]">
           Nenhum projeto ainda. Adicione o primeiro acima 👆
+        </div>
+      ) : projetosFiltrados.length === 0 ? (
+        <div className="card grid place-items-center p-10 text-center text-sm text-[var(--muted)]">
+          Nenhum projeto encontrado para a busca ou filtro.
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
