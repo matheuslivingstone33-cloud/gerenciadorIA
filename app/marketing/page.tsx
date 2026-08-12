@@ -18,6 +18,9 @@ import MarketingResultView from "@/components/MarketingResultView";
 
 const MAX_ARQUIVOS = 5;
 const MAX_ARQUIVO_BYTES = 4 * 1024 * 1024;
+// Teto do total somado dos anexos. Mantém o envio abaixo do limite da função
+// serverless do Vercel (~4,5 MB por requisição), evitando erro em produção.
+const MAX_TOTAL_BYTES = 4 * 1024 * 1024;
 const ACEITA = ".pdf,.txt,.md,.markdown,.csv,.tsv,.json,.log,.html";
 
 function formatarBytes(b: number): string {
@@ -87,6 +90,7 @@ export default function MarketingPage() {
     setAvisoArquivo(null);
     setArquivos((atual) => {
       const combinados = [...atual];
+      let total = combinados.reduce((s, f) => s + f.size, 0);
       for (const f of Array.from(lista)) {
         if (combinados.length >= MAX_ARQUIVOS) {
           setAvisoArquivo(`Máximo de ${MAX_ARQUIVOS} arquivos.`);
@@ -97,7 +101,14 @@ export default function MarketingPage() {
           continue;
         }
         if (combinados.some((x) => x.name === f.name && x.size === f.size)) continue;
+        if (total + f.size > MAX_TOTAL_BYTES) {
+          setAvisoArquivo(
+            `Limite de 4 MB somando os anexos (evita erro no envio). "${f.name}" ficou de fora.`,
+          );
+          continue;
+        }
         combinados.push(f);
+        total += f.size;
       }
       return combinados;
     });
