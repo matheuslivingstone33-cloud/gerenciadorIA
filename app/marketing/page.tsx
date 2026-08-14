@@ -230,13 +230,13 @@ export default function MarketingPage() {
           {origemProjeto && (
             <div className="mt-2 flex items-center gap-2">
               <span className="badge" style={{ borderColor: "var(--brand)", color: "var(--brand)" }}>
-                🔗 Vinculada ao projeto: {origemProjeto.nome}
+                🔗 Vinculada à ideia: {origemProjeto.nome}
               </span>
               <button
                 type="button"
                 className="text-xs text-[var(--muted)] hover:text-[var(--danger)]"
                 onClick={() => setOrigemProjeto(null)}
-                title="Desvincular do projeto"
+                title="Desvincular da ideia"
               >
                 desvincular
               </button>
@@ -380,7 +380,7 @@ export default function MarketingPage() {
           {salvas.length > 0 && (
             <input
               className="input mt-2 !py-1.5 !text-xs"
-              placeholder="Buscar por título, projeto ou objetivo..."
+              placeholder="Buscar por título, ideia ou objetivo..."
               value={buscaHist}
               onChange={(e) => setBuscaHist(e.target.value)}
             />

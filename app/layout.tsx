@@ -7,9 +7,9 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "sextafeira — gestão de projetos + análise de marketing",
+  title: "sextafeira — banco de ideias + análise de marketing",
   description:
-    "Painel para gerenciar, controlar e idear projetos, com uma análise de marketing que lê, resume e diagnostica o material — offline, sem IA e sem serviço externo.",
+    "App para anotar, organizar e desenvolver ideias, com uma análise de marketing que lê, resume e diagnostica cada ideia — offline, sem IA e sem serviço externo.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </header>
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
         <footer className="border-t px-4 py-4 text-center text-xs text-[var(--muted)]">
-          Gestão de projetos + análise de marketing · roda 100% no seu computador
+          Banco de ideias + análise de marketing · roda 100% no seu computador
         </footer>
       </body>
     </html>

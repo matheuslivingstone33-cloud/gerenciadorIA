@@ -111,7 +111,7 @@ export default function PainelPage() {
   }
 
   function analisarNoMarketing(p: Projeto) {
-    const conteudo = `Projeto: ${p.nome}\n\n${p.descricao}${
+    const conteudo = `Ideia: ${p.nome}\n\n${p.descricao}${
       p.ideias.length ? "\n\nIdeias:\n- " + p.ideias.map((i) => i.texto).join("\n- ") : ""
     }`;
     definirPrefillMarketing({
@@ -157,9 +157,9 @@ export default function PainelPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Painel de projetos</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Minhas ideias</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Gerencie, controle e ideie seus projetos. Mova pelo status e envie qualquer um
+          Anote, organize e desenvolva suas ideias. Mova pelo status e envie qualquer uma
           para a Análise de Marketing.
         </p>
       </div>
@@ -169,7 +169,7 @@ export default function PainelPage() {
         <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
           <input
             className="input"
-            placeholder="Nome do projeto (ex.: Lançamento linha X)"
+            placeholder="Nome da ideia (ex.: Lançamento linha X)"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
           />
@@ -187,13 +187,13 @@ export default function PainelPage() {
         </div>
         <textarea
           className="input mt-3 min-h-[70px] resize-y"
-          placeholder="Descrição / ideia inicial (opcional)"
+          placeholder="Descrição da ideia (opcional)"
           value={descricao}
           onChange={(e) => setDescricao(e.target.value)}
         />
         <div className="mt-3 flex justify-end">
           <button type="submit" className="btn btn-primary" disabled={!nome.trim()}>
-            + Adicionar projeto
+            + Adicionar ideia
           </button>
         </div>
       </form>
@@ -203,7 +203,7 @@ export default function PainelPage() {
         <div className="flex flex-wrap items-center gap-2">
           <input
             className="input max-w-xs !py-1.5 !text-sm"
-            placeholder="Buscar projeto por nome ou descrição..."
+            placeholder="Buscar ideia por nome ou descrição..."
             value={buscaProj}
             onChange={(e) => setBuscaProj(e.target.value)}
           />
@@ -230,11 +230,11 @@ export default function PainelPage() {
       {/* quadro */}
       {carregado && projetos.length === 0 ? (
         <div className="card grid place-items-center p-10 text-center text-sm text-[var(--muted)]">
-          Nenhum projeto ainda. Adicione o primeiro acima 👆
+          Nenhuma ideia ainda. Adicione a primeira acima 👆
         </div>
       ) : projetosFiltrados.length === 0 ? (
         <div className="card grid place-items-center p-10 text-center text-sm text-[var(--muted)]">
-          Nenhum projeto encontrado para a busca ou filtro.
+          Nenhuma ideia encontrada para a busca ou filtro.
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -437,16 +437,16 @@ function DetalheProjeto({
         </label>
 
         <div className="mt-4">
-          <h4 className="text-sm font-semibold">Ideias & criatividade</h4>
+          <h4 className="text-sm font-semibold">Anotações & detalhes</h4>
           <form onSubmit={addIdeia} className="mt-2 flex gap-2">
             <input
               className="input"
-              placeholder="Anote uma ideia..."
+              placeholder="Anote um detalhe, um próximo passo, uma referência..."
               value={novaIdeia}
               onChange={(e) => setNovaIdeia(e.target.value)}
             />
             <button className="btn btn-primary shrink-0" disabled={!novaIdeia.trim()}>
-              + Ideia
+              + Nota
             </button>
           </form>
           <ul className="mt-2 space-y-1.5">
@@ -465,7 +465,7 @@ function DetalheProjeto({
               </li>
             ))}
             {projeto.ideias.length === 0 && (
-              <li className="px-1 text-xs text-[var(--muted)]">Nenhuma ideia anotada ainda.</li>
+              <li className="px-1 text-xs text-[var(--muted)]">Nenhuma anotação ainda.</li>
             )}
           </ul>
         </div>
@@ -549,7 +549,7 @@ function DetalheProjeto({
             ))}
             {analises.length === 0 && (
               <li className="px-1 text-xs text-[var(--muted)]">
-                Nenhuma análise salva para este projeto ainda.
+                Nenhuma análise salva para esta ideia ainda.
               </li>
             )}
           </ul>
@@ -579,7 +579,7 @@ function AnaliseViewer({ analise, onFechar }: { analise: AnaliseSalva; onFechar:
           <div className="min-w-0">
             <h3 className="truncate text-lg font-semibold">{analise.titulo}</h3>
             {analise.projetoNome && (
-              <p className="text-xs text-[var(--muted)]">Projeto: {analise.projetoNome}</p>
+              <p className="text-xs text-[var(--muted)]">Ideia: {analise.projetoNome}</p>
             )}
           </div>
           <button className="btn btn-ghost !px-2.5 !py-1.5" onClick={onFechar}>
